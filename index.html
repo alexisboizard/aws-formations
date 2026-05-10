@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AWS 30 jours — Suivi</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #111;
+      --surface: #1a1a1a;
+      --surface2: #222;
+      --border: #2e2e2e;
+      --text: #e2e2e2;
+      --muted: #777;
+      --accent: #e8821a;
+      --accent-dim: rgba(232, 130, 26, 0.15);
+      --green: #4caf50;
+      --green-dim: rgba(76, 175, 80, 0.12);
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 14px;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    header {
+      border-bottom: 1px solid var(--border);
+      padding: 24px 32px 20px;
+      display: flex;
+      align-items: flex-end;
+      gap: 32px;
+      flex-wrap: wrap;
+    }
+
+    .header-title h1 {
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: -0.2px;
+    }
+    .header-title p {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 2px;
+    }
+
+    .progress-block {
+      flex: 1;
+      min-width: 220px;
+      max-width: 400px;
+    }
+    .progress-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .progress-label span:last-child {
+      color: var(--accent);
+      font-weight: 600;
+    }
+    .progress-bar {
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 2px;
+      transition: width 0.3s ease;
+    }
+
+    /* ── Main layout ── */
+    main {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 32px 24px 80px;
+    }
+
+    /* ── Week section ── */
+    .week {
+      margin-bottom: 40px;
+    }
+
+    .week-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .week-header h2 {
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--muted);
+    }
+    .week-header .week-progress {
+      font-size: 11px;
+      color: var(--muted);
+      margin-left: auto;
+    }
+    .week-divider {
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ── Day card ── */
+    .day-card {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      margin-bottom: 8px;
+      background: var(--surface);
+      transition: border-color 0.15s;
+    }
+    .day-card.done {
+      background: var(--green-dim);
+      border-color: rgba(76, 175, 80, 0.25);
+    }
+    .day-card.done .day-title {
+      color: var(--muted);
+      text-decoration: line-through;
+      text-decoration-color: #555;
+    }
+
+    .day-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .day-check {
+      width: 16px;
+      height: 16px;
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      background: var(--surface2);
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s, border-color 0.15s;
+      cursor: pointer;
+    }
+    .day-card.done .day-check {
+      background: var(--green);
+      border-color: var(--green);
+    }
+    .day-check svg {
+      display: none;
+    }
+    .day-card.done .day-check svg {
+      display: block;
+    }
+
+    .day-num {
+      font-size: 11px;
+      color: var(--muted);
+      width: 42px;
+      flex-shrink: 0;
+    }
+
+    .day-title {
+      font-size: 13px;
+      font-weight: 500;
+      flex: 1;
+    }
+
+    .day-badge {
+      font-size: 10px;
+      padding: 2px 7px;
+      border-radius: 3px;
+      background: var(--accent-dim);
+      color: var(--accent);
+      flex-shrink: 0;
+    }
+    .day-card.done .day-badge {
+      background: var(--green-dim);
+      color: var(--green);
+    }
+
+    .day-toggle {
+      color: var(--muted);
+      font-size: 10px;
+      flex-shrink: 0;
+      transition: transform 0.15s;
+    }
+    .day-card.open .day-toggle {
+      transform: rotate(180deg);
+    }
+
+    /* ── Day body ── */
+    .day-body {
+      display: none;
+      padding: 0 14px 14px 14px;
+      border-top: 1px solid var(--border);
+    }
+    .day-card.open .day-body {
+      display: block;
+    }
+
+    .day-content {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 12px;
+    }
+    @media (max-width: 600px) {
+      .day-content { grid-template-columns: 1fr; }
+    }
+
+    .content-block h4 {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .content-block ul {
+      list-style: none;
+      padding: 0;
+    }
+    .content-block ul li {
+      font-size: 12px;
+      color: #bbb;
+      padding: 2px 0;
+      padding-left: 12px;
+      position: relative;
+    }
+    .content-block ul li::before {
+      content: "·";
+      position: absolute;
+      left: 0;
+      color: var(--muted);
+    }
+
+    .notes-block {
+      margin-top: 12px;
+    }
+    .notes-block h4 {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    textarea {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 12px;
+      line-height: 1.5;
+      padding: 8px 10px;
+      resize: vertical;
+      min-height: 72px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    textarea:focus {
+      border-color: var(--accent);
+    }
+    textarea::placeholder {
+      color: #444;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-title">
+    <h1>AWS — 30 jours</h1>
+    <p>SysAdmin → Cloud Engineer</p>
+  </div>
+  <div class="progress-block">
+    <div class="progress-label">
+      <span>Progression globale</span>
+      <span id="progress-text">0 / 30 jours</span>
+    </div>
+    <div class="progress-bar">
+      <div class="progress-bar-fill" id="progress-fill" style="width:0%"></div>
+    </div>
+  </div>
+</header>
+
+<main id="app"></main>
+
+<script>
+const DAYS = [
+  // ── Semaine 1 ──
+  { week: 1, day: 1, title: "Introduction AWS", badge: "Fondations",
+    topics: ["AWS Cloud Practitioner Essentials", "Shared responsibility model", "Régions / Availability Zones"],
+    lab: ["Création compte AWS", "Activation MFA", "Création utilisateur IAM admin"] },
+  { week: 1, day: 2, title: "EC2", badge: "Fondations",
+    topics: ["Instances EC2", "EBS", "Security Groups", "SSH"],
+    lab: ["Lancer une instance EC2 Linux", "Connexion SSH", "Installer Nginx"] },
+  { week: 1, day: 3, title: "S3", badge: "Fondations",
+    topics: ["Buckets", "Permissions", "Versioning", "Lifecycle"],
+    lab: ["Héberger un site statique sur S3"] },
+  { week: 1, day: 4, title: "IAM", badge: "Fondations",
+    topics: ["Users / Groups / Roles", "Policies JSON", "Least privilege"],
+    lab: ["Rôle EC2 avec accès S3"] },
+  { week: 1, day: 5, title: "VPC basics", badge: "Fondations",
+    topics: ["Subnets", "Route tables", "Internet gateway", "NAT gateway"],
+    lab: ["Créer un VPC simple"] },
+  { week: 1, day: 6, title: "Architecture", badge: "Fondations",
+    topics: ["EC2 + VPC + S3", "Schémas réseau"],
+    lab: ["Dessiner une infra simple AWS"] },
+  { week: 1, day: 7, title: "Mini projet #1", badge: "Projet",
+    topics: ["Infra simple : EC2 + Nginx", "VPC", "Security Groups"],
+    lab: [] },
+
+  // ── Semaine 2 ──
+  { week: 2, day: 8, title: "CloudWatch", badge: "SysAdmin",
+    topics: ["Logs", "Métriques", "Alertes"],
+    lab: ["Alerte CPU sur EC2"] },
+  { week: 2, day: 9, title: "Load Balancer", badge: "SysAdmin",
+    topics: ["ALB", "Target groups"],
+    lab: ["2 EC2 derrière un ALB"] },
+  { week: 2, day: 10, title: "Auto Scaling", badge: "SysAdmin",
+    topics: ["Launch templates", "Scaling policies"],
+    lab: ["Autoscaling EC2"] },
+  { week: 2, day: 11, title: "RDS", badge: "SysAdmin",
+    topics: ["Bases managées", "Backups"],
+    lab: ["App EC2 + RDS"] },
+  { week: 2, day: 12, title: "Sécurité", badge: "SysAdmin",
+    topics: ["Bastion host", "Private/public subnet", "IAM avancé"],
+    lab: [] },
+  { week: 2, day: 13, title: "Backup", badge: "SysAdmin",
+    topics: ["Snapshots EBS", "AMI"],
+    lab: ["Backup + restore"] },
+  { week: 2, day: 14, title: "Mini projet #2", badge: "Projet",
+    topics: ["Infra type entreprise : ALB + EC2 + RDS + monitoring"],
+    lab: [] },
+
+  // ── Semaine 3 ──
+  { week: 3, day: 15, title: "Terraform intro", badge: "Automation",
+    topics: ["Provider", "Resources", "State"],
+    lab: [] },
+  { week: 3, day: 16, title: "Terraform AWS", badge: "Automation",
+    topics: ["EC2", "VPC", "Security Groups"],
+    lab: [] },
+  { week: 3, day: 17, title: "Modules Terraform", badge: "Automation",
+    topics: ["Variables", "Outputs", "Réutilisation"],
+    lab: [] },
+  { week: 3, day: 18, title: "AWS CLI", badge: "Automation",
+    topics: ["EC2 / S3 / IAM via CLI"],
+    lab: [] },
+  { week: 3, day: 19, title: "Git", badge: "Automation",
+    topics: ["Repo infra", "Versioning"],
+    lab: [] },
+  { week: 3, day: 20, title: "CI/CD", badge: "Automation",
+    topics: ["GitHub Actions", "Terraform automation"],
+    lab: [] },
+  { week: 3, day: 21, title: "Mini projet #3", badge: "Projet",
+    topics: ["Infra complète Terraform : VPC + EC2 + ALB + IAM"],
+    lab: [] },
+
+  // ── Semaine 4 ──
+  { week: 4, day: 22, title: "Architecting AWS", badge: "Entretien",
+    topics: ["Haute disponibilité", "Fault tolerance"],
+    lab: [] },
+  { week: 4, day: 23, title: "Réseaux avancés", badge: "Entretien",
+    topics: ["NAT", "VPC peering", "Route 53"],
+    lab: [] },
+  { week: 4, day: 24, title: "Sécurité avancée", badge: "Entretien",
+    topics: ["KMS", "Secrets Manager"],
+    lab: [] },
+  { week: 4, day: 25, title: "Cas réels", badge: "Entretien",
+    topics: ["Migration on-prem → AWS", "Scaling infra"],
+    lab: [] },
+  { week: 4, day: 26, title: "Certification prep", badge: "Entretien",
+    topics: ["AWS Solutions Architect Associate", "Examens blancs"],
+    lab: [] },
+  { week: 4, day: 27, title: "Révision", badge: "Entretien",
+    topics: ["Architectures types", "Services AWS clés"],
+    lab: [] },
+  { week: 4, day: 28, title: "Projet final", badge: "Projet",
+    topics: ["Infra production-like : Terraform + monitoring + sécurité + README GitHub"],
+    lab: [] },
+  { week: 4, day: 29, title: "Entretien", badge: "Entretien",
+    topics: ["Expliquer une architecture", "Choix techniques", "Troubleshooting"],
+    lab: [] },
+  { week: 4, day: 30, title: "Bilan", badge: "Fin",
+    topics: ["Infra AWS complète", "Terraform maîtrisé", "Prêt pour entretien cloud"],
+    lab: [] },
+];
+
+const WEEK_LABELS = {
+  1: "Semaine 1 — Fondations AWS",
+  2: "Semaine 2 — SysAdmin Cloud",
+  3: "Semaine 3 — Terraform & Automation",
+  4: "Semaine 4 — Niveau entretien",
+};
+
+// ── State ──
+function loadState() {
+  try { return JSON.parse(localStorage.getItem("aws30") || "{}"); }
+  catch { return {}; }
+}
+function saveState(state) {
+  localStorage.setItem("aws30", JSON.stringify(state));
+}
+
+let state = loadState();
+
+// ── Render ──
+function render() {
+  const app = document.getElementById("app");
+  const weeks = [...new Set(DAYS.map(d => d.week))];
+
+  app.innerHTML = weeks.map(w => {
+    const days = DAYS.filter(d => d.week === w);
+    const doneCount = days.filter(d => state[d.day]?.done).length;
+    return `
+      <section class="week" data-week="${w}">
+        <div class="week-header">
+          <h2>${WEEK_LABELS[w]}</h2>
+          <div class="week-divider"></div>
+          <span class="week-progress">${doneCount}/${days.length}</span>
+        </div>
+        ${days.map(d => renderDay(d)).join("")}
+      </section>
+    `;
+  }).join("");
+
+  updateProgress();
+  attachEvents();
+}
+
+function renderDay(d) {
+  const s = state[d.day] || {};
+  const done = !!s.done;
+  const open = !!s.open;
+  const notes = s.notes || "";
+
+  const hasTopic = d.topics.length > 0;
+  const hasLab = d.lab.length > 0;
+
+  return `
+    <div class="day-card${done ? " done" : ""}${open ? " open" : ""}" data-day="${d.day}">
+      <div class="day-header">
+        <div class="day-check" data-action="check">
+          <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+            <path d="M1 4l2.5 2.5L9 1" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <span class="day-num">Jour ${d.day}</span>
+        <span class="day-title">${d.title}</span>
+        <span class="day-badge">${d.badge}</span>
+        <span class="day-toggle">▼</span>
+      </div>
+      <div class="day-body">
+        <div class="day-content">
+          ${hasTopic ? `
+          <div class="content-block">
+            <h4>Au programme</h4>
+            <ul>${d.topics.map(t => `<li>${t}</li>`).join("")}</ul>
+          </div>` : ""}
+          ${hasLab ? `
+          <div class="content-block">
+            <h4>Lab / Pratique</h4>
+            <ul>${d.lab.map(l => `<li>${l}</li>`).join("")}</ul>
+          </div>` : ""}
+        </div>
+        <div class="notes-block">
+          <h4>Mes notes</h4>
+          <textarea data-action="notes" placeholder="Commandes utiles, observations, liens…" rows="4">${notes}</textarea>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function updateProgress() {
+  const done = DAYS.filter(d => state[d.day]?.done).length;
+  const pct = Math.round((done / DAYS.length) * 100);
+  document.getElementById("progress-fill").style.width = pct + "%";
+  document.getElementById("progress-text").textContent = `${done} / ${DAYS.length} jours`;
+}
+
+function attachEvents() {
+  document.querySelectorAll(".day-card").forEach(card => {
+    const day = parseInt(card.dataset.day);
+
+    // Toggle open on header (except check)
+    card.querySelector(".day-header").addEventListener("click", e => {
+      if (e.target.closest("[data-action='check']")) return;
+      state[day] = state[day] || {};
+      state[day].open = !state[day].open;
+      saveState(state);
+      card.classList.toggle("open", state[day].open);
+      card.querySelector(".day-toggle").style.transform = state[day].open ? "rotate(180deg)" : "";
+    });
+
+    // Checkbox
+    card.querySelector("[data-action='check']").addEventListener("click", e => {
+      e.stopPropagation();
+      state[day] = state[day] || {};
+      state[day].done = !state[day].done;
+      saveState(state);
+      card.classList.toggle("done", state[day].done);
+      updateProgress();
+    });
+
+    // Notes
+    card.querySelector("[data-action='notes']").addEventListener("input", e => {
+      state[day] = state[day] || {};
+      state[day].notes = e.target.value;
+      saveState(state);
+    });
+  });
+}
+
+render();
+</script>
+</body>
+</html>
