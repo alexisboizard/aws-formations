@@ -249,36 +249,78 @@
     }
 
     .notes-block {
-      margin-top: 12px;
+      margin-top: 16px;
+      border-top: 1px solid var(--border);
+      padding-top: 14px;
     }
-    .notes-block h4 {
+    .notes-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .notes-header h4 {
       font-size: 11px;
       text-transform: uppercase;
       letter-spacing: 0.6px;
-      color: var(--muted);
-      margin-bottom: 6px;
+      color: var(--text);
+      font-weight: 600;
     }
+    .notes-saved {
+      font-size: 11px;
+      color: var(--green);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .notes-saved.show { opacity: 1; }
+
     textarea {
       width: 100%;
-      background: var(--bg);
+      background: #0d0d0d;
       border: 1px solid var(--border);
-      border-radius: 4px;
-      color: var(--text);
-      font-family: inherit;
-      font-size: 12px;
-      line-height: 1.5;
-      padding: 8px 10px;
+      border-left: 3px solid var(--accent);
+      border-radius: 0 4px 4px 0;
+      color: #d4d4d4;
+      font-family: "SF Mono", "Fira Code", "Consolas", monospace;
+      font-size: 12.5px;
+      line-height: 1.7;
+      padding: 12px 14px;
       resize: vertical;
-      min-height: 72px;
+      min-height: 140px;
       outline: none;
       transition: border-color 0.15s;
     }
     textarea:focus {
-      border-color: var(--accent);
+      border-left-color: #f0a040;
+      border-color: #3a3a3a;
+      border-left-color: #f0a040;
     }
-    textarea::placeholder {
-      color: #444;
+    textarea::placeholder { color: #333; }
+
+    /* note preview on collapsed card */
+    .note-preview {
+      font-size: 11px;
+      color: var(--muted);
+      font-family: "SF Mono", "Fira Code", "Consolas", monospace;
+      max-width: 260px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      flex-shrink: 1;
+      min-width: 0;
     }
+    .day-card.open .note-preview { display: none; }
+
+    /* dot indicator when notes exist */
+    .note-dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--accent);
+      flex-shrink: 0;
+      display: none;
+    }
+    .has-notes .note-dot { display: block; }
   </style>
 </head>
 <body>
@@ -409,6 +451,10 @@ const WEEK_LABELS = {
   4: "Semaine 4 — Niveau entretien",
 };
 
+function escHtml(s) {
+  return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
 // ── State ──
 function loadState() {
   try { return JSON.parse(localStorage.getItem("aws30") || "{}"); }
@@ -454,7 +500,7 @@ function renderDay(d) {
   const hasLab = d.lab.length > 0;
 
   return `
-    <div class="day-card${done ? " done" : ""}${open ? " open" : ""}" data-day="${d.day}">
+    <div class="day-card${done ? " done" : ""}${open ? " open" : ""}${notes ? " has-notes" : ""}" data-day="${d.day}">
       <div class="day-header">
         <div class="day-check" data-action="check">
           <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
@@ -464,6 +510,8 @@ function renderDay(d) {
         <span class="day-num">Jour ${d.day}</span>
         <span class="day-title">${d.title}</span>
         <span class="day-badge">${d.badge}</span>
+        ${notes ? `<span class="note-preview">${escHtml(notes.split('\n')[0])}</span>` : ""}
+        <span class="note-dot"></span>
         <span class="day-toggle">▼</span>
       </div>
       <div class="day-body">
@@ -480,8 +528,11 @@ function renderDay(d) {
           </div>` : ""}
         </div>
         <div class="notes-block">
-          <h4>Mes notes</h4>
-          <textarea data-action="notes" placeholder="Commandes utiles, observations, liens…" rows="4">${notes}</textarea>
+          <div class="notes-header">
+            <h4>Notes</h4>
+            <span class="notes-saved" data-saved>sauvegardé</span>
+          </div>
+          <textarea data-action="notes" placeholder="Commandes, observations, erreurs rencontrées, liens utiles…">${escHtml(notes)}</textarea>
         </div>
       </div>
     </div>
@@ -520,10 +571,30 @@ function attachEvents() {
     });
 
     // Notes
+    let saveTimer;
     card.querySelector("[data-action='notes']").addEventListener("input", e => {
       state[day] = state[day] || {};
       state[day].notes = e.target.value;
       saveState(state);
+
+      // update dot + preview
+      const hasNotes = e.target.value.trim().length > 0;
+      card.classList.toggle("has-notes", hasNotes);
+      const preview = card.querySelector(".note-preview");
+      if (preview) {
+        preview.textContent = e.target.value.split('\n')[0];
+      } else if (hasNotes) {
+        const span = document.createElement("span");
+        span.className = "note-preview";
+        span.textContent = e.target.value.split('\n')[0];
+        card.querySelector(".note-dot").insertAdjacentElement("beforebegin", span);
+      }
+
+      // flash saved
+      const saved = card.querySelector("[data-saved]");
+      saved.classList.add("show");
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(() => saved.classList.remove("show"), 1400);
     });
   });
 }
